@@ -67,7 +67,6 @@ void Image::Brighten (double factor)
 
 void Image::ChangeContrast (double factor)
 {
-
   float luminance = 0;
   for(int i = 0; i < num_pixels; ++i) {
     luminance += pixels[i].Luminance();
@@ -93,18 +92,68 @@ void Image::ChangeContrast (double factor)
 
 void Image::ChangeSaturation(double factor)
 {
-  /* Your Work Here (section 3.2.3) */
+  bool invert = false;
+  if(factor < 0) {
+    invert = true;
+    factor *= -1.0;
+  }
+
+  for(int i = 0; i < num_pixels; ++i) {
+    float greyColor = (pixels[i].r + pixels[i].g + pixels[i].b) / 3;
+    Pixel greyPixel(greyColor, greyColor, greyColor);
+
+    if(invert) {
+      pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
+    }
+
+    pixels[i] = greyPixel * (1 - factor) + pixels[i] * factor;
+    pixels[i].SetClamp(pixels[i].r, pixels[i].g, pixels[i].b);
+  }
 }
 
 void Image::ChangeGamma(double factor)
 {
-  /* Your Work Here (section 3.2.4) */
+  if(factor < 0.0) {
+    std::cerr << "Error. Negative gamma correction value. Value must be "
+              << "greater than or equal to 0." 
+              << std::endl;
+  }
+
+  for(int i = 0; i < num_pixels; ++i) {
+    pixels[i].r = pow(pixels[i].r, 1.f / factor);   
+    pixels[i].g = pow(pixels[i].g, 1.f / factor);   
+    pixels[i].b = pow(pixels[i].b, 1.f / factor);   
+  }
 }
 
 Image* Image::Crop(int x, int y, int w, int h)
 {
-  /* Your Work Here (section 3.2.5) */
-  return NULL ;
+  if(x < 0 || y < 0 || w < 0 || h < 0) {
+    std::cerr << "Error. Negative argument to Image::Crop." << std::endl;
+    return NULL;
+  }
+
+  if(x + w > width) {
+    std::cerr << "w greater " << w << std::endl;
+    w = width - x;
+  }
+
+  if(y + h > height) {
+    std::cerr << "h greater " << h << std::endl;
+    h = height - y;
+  }
+
+  int dx = 0;
+  int dy = 0;
+  Image* image = new Image(w, h);
+  Pixel* targetPixels = image->pixels;
+  for(int sy = y; sy < height; ++sy, ++dy) {
+    for(int sx = x; sx < width; ++sx, ++dx) {
+      targetPixels[dy * w + dx] = pixels[sy * width + sx];
+    }
+    dx = 0;
+  }
+  return image;
 }
 
 /*
