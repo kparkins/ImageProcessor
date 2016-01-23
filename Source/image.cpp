@@ -55,6 +55,7 @@ void Image::Brighten (double factor)
   /* Your Work Here  (section 3.2.1 of assignment)*/
   if(factor < 0.f) {
     std::cerr << "Error. Brighten factor less than 0." << std::endl;
+    return;
   }
 
   for(int i = 0; i < num_pixels; ++i) {
@@ -117,6 +118,7 @@ void Image::ChangeGamma(double factor)
     std::cerr << "Error. Negative gamma correction value. Value must be "
               << "greater than or equal to 0." 
               << std::endl;
+    return;
   }
 
   for(int i = 0; i < num_pixels; ++i) {
@@ -134,18 +136,21 @@ Image* Image::Crop(int x, int y, int w, int h)
   }
 
   if(x + w > width) {
-    std::cerr << "w greater " << w << std::endl;
+    std::cerr << "Crop width greater than image width. "
+              << "Capping crop width at image width." << std::endl;
     w = width - x;
   }
 
   if(y + h > height) {
-    std::cerr << "h greater " << h << std::endl;
+    std::cerr << "Crop height greater than image height. "
+              << "Capping crop height at image height." << std::endl;
     h = height - y;
   }
 
   int dx = 0;
   int dy = 0;
   Image* image = new Image(w, h);
+  assert(image != NULL);
   Pixel* targetPixels = image->pixels;
   for(int sy = y; sy < height; ++sy, ++dy) {
     for(int sx = x; sx < width; ++sx, ++dx) {
@@ -164,15 +169,51 @@ void Image::ExtractChannel(int channel)
 }
 */
 
-void Image::Quantize (int nbits)
-{
-  /* Your Work Here (Section 3.3.1) */
+Component QuantizeChannel(Component original, int numChannels, float noise = 0) {
+  float normalized = ((float) original) / 256.f;
+  float quantum = floor(normalized * numChannels + noise);
+  if(quantum < 0) {
+    quantum = 0;
+  } else if(quantum > numChannels - 1) {
+    quantum = numChannels - 1;
+  }
+  return (Component) (floor(255.f * quantum / (numChannels - 1)));
 }
 
+void Image::Quantize (int nbits)
+{
+  if(nbits < 1 || nbits > 8) {
+    std::cerr << "Error. Quantize only accepts arguments in the range [1, 8]." << std::endl;
+    return;
+  }
+
+  int numChannels = pow(2, nbits);
+  
+  for(int i = 0; i < num_pixels; ++i) {
+    Pixel& p = pixels[i];
+    p.r = QuantizeChannel(p.r, numChannels);
+    p.g = QuantizeChannel(p.g, numChannels);
+    p.b = QuantizeChannel(p.b, numChannels);
+  }
+}
 
 void Image::RandomDither (int nbits)
 {
-  /* Your Work Here (Section 3.3.2) */
+  srand(time(NULL));
+  if(nbits < 1 || nbits > 8) {
+    std::cerr << "Error. Random Dither only accepts arguments in the range [1, 8]." << std::endl;
+    return;
+  }
+
+  int numChannels = pow(2, nbits);
+  
+  for(int i = 0; i < num_pixels; ++i) {
+    float noise = ((float) rand() / (float) RAND_MAX) - .5;
+    Pixel& p = pixels[i];
+    p.r = QuantizeChannel(p.r, numChannels, noise);
+    p.g = QuantizeChannel(p.g, numChannels, noise);
+    p.b = QuantizeChannel(p.b, numChannels, noise);
+  }
 }
 
 
