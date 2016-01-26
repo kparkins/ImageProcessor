@@ -44,6 +44,15 @@ struct Line
     Vector p, q;
 };
 
+template<typename Tr, typename Tn, typename Tm>
+Tr mod(Tn n, Tm m) {
+  Tr r = n - (n / m) * m;
+  if(r < 0) {
+    return r + m;
+  }
+  return r;
+}
+
 
 
 /**
@@ -69,11 +78,14 @@ public:
     // Pixel access
     int ValidCoord (int x, int y)  { return x>=0 && x<width && y>=0 && y<height; }
     Pixel& GetPixel (int x, int y) { assert(ValidCoord(x,y)); return pixels[y*width + x]; }
+    Pixel& GetValidPixel(int x, int y);
 
     // Dimension access
     int Width     () { return width; }
     int Height    () { return height; }
     int NumPixels () { return num_pixels; }
+
+    void UpdatePixelError(int x, int y, float r, float g, float b, double weight);
 
     /*
     // Adds noise to an image.  The amount of noise is given by the factor
