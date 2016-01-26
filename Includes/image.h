@@ -139,7 +139,9 @@ public:
     void RandomDither(int nbits);
 
     // Helper function to implement convolution 
-    void Convolve(int *filter, int n, int normalization, int absval = 0) ;
+    void Convolve(int *filter, int n, int normalization) ;
+
+    void ConvolveEdgeDetect(PixelFloat* result, int* filter, int n);
 
     // Blurs an image with an n x n Gaussian filter.
     void Blur(int n);

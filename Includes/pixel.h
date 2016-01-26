@@ -30,6 +30,34 @@ Component ComponentScale(Component c, double f);
 Component ComponentLerp(Component c, Component d, double t);
 
 
+typedef struct PixelFloat {
+
+  float r,g,b,a;
+
+  PixelFloat() {
+    r = 0;
+    g = 0;
+    b = 0;
+    a = 255;
+  }
+
+  ~PixelFloat() {
+  
+  }
+
+  void Set(float r_, float g_, float b_) {
+    r = r_;
+    g = g_;
+    b = b_;
+    a = 255;
+  }
+
+  float Luminance() {
+    return (r * 76.f + g * 150.f + b * 29.f) / 256.f;
+  }
+
+} PixelFloat;
+
 
 /**
  * Pixel

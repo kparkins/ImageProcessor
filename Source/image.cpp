@@ -311,18 +311,13 @@ void ImageComposite(Image *bottom, Image *top, Image *result)
   // One idea is to composite your face into a famous picture
 }
 
-void Image::Convolve(int *filter, int n, int normalization, int absval) {
-  // This is my definition of an auxiliary function for image convolution 
-  // with an integer filter of width n and certain normalization.
-  // The absval param is to consider absolute values for edge detection.
- 
+void Image::Convolve(int *filter, int n, int normalization) {
   int d = (n - 1) / 2;
   float r = 0;
   float g = 0;
   float b = 0;
   float weight = 0;
 
-  std::cerr << normalization << std::endl;
   if(d <= 0) {
     std::cerr << "Kernel width invalid. Copying original image." << std::endl;
     return;
@@ -337,6 +332,8 @@ void Image::Convolve(int *filter, int n, int normalization, int absval) {
       // Apply filter to local area centered at ij
       for(int dy = -d; dy <= d; ++dy) {
         for(int dx = -d; dx <= d; ++dx) {
+          // GetValidPixel automatically handles edge case
+          // using "toroidal" picture
           Pixel & p = GetValidPixel(i + dx, j + dy);
           weight = filter[(dy + d) * n + (dx + d)]; 
           r += weight * (float) p.r;
@@ -391,21 +388,88 @@ void Image::Blur(int n)
     }
   }
   
-  this->Convolve(kernel, n, normalization, 0);
+  this->Convolve(kernel, n, normalization);
 }
 
 void Image::Sharpen() 
 {
-  static int[9] kernel = {
+  static int kernel[9] = {
     -1, -2, -1, 
     -2, 19, -2, 
     -1, -2, -1
+  };
+  this->Convolve(kernel, 3, 7);
+}
+
+void Image::ConvolveEdgeDetect(PixelFloat* result, int* filter, int n) {
+  int d = (n - 1) / 2;
+  float r = 0;
+  float g = 0;
+  float b = 0;
+  float weight = 0;
+
+  if(d <= 0) {
+    std::cerr << "Kernel width invalid. Copying original image." << std::endl;
+    return;
   }
-  this->Convolve(kernel, 3, 7, 0);
+
+  for(int j = 0; j < height; ++j) {
+    for(int i = 0; i < width; ++i) {
+      r = 0;
+      g = 0;
+      b = 0;
+      // Apply filter to local area centered at ij
+      for(int dy = -d; dy <= d; ++dy) {
+        for(int dx = -d; dx <= d; ++dx) {
+          // GetValidPixel automatically handles edge case
+          // using "toroidal" picture
+          Pixel& p = GetValidPixel(i + dx, j + dy);
+          weight = filter[(dy + d) * n + (dx + d)]; 
+          r += weight * (float) p.r;
+          g += weight * (float) p.g;
+          b += weight * (float) p.b;
+        }
+      }  
+      result[j * width + i].Set(r,g,b);
+    }
+  }
+
 }
 
 void Image::EdgeDetect(int threshold)
 {
+  static int fx[9] = {
+    -1, 0, 1,
+    -2, 0, 2,
+    -1, 0, 1
+  };
+
+  static int fy[9] = {
+    1, 2, 1,
+    0, 0, 0,
+    -1, -2, -1
+  };
+
+  PixelFloat* gx = new PixelFloat[width * height];
+  PixelFloat* gy = new PixelFloat[width * height];
+  Pixel* g = new Pixel[width * height];
+
+  this->ConvolveEdgeDetect(gx, fx, 3);
+  this->ConvolveEdgeDetect(gy, fy, 3);
+
+  float lx, ly;
+  for(int i = 0; i < num_pixels; ++i) {
+    lx = gx[i].Luminance();
+    ly = gy[i].Luminance();
+    if(lx * lx + ly * ly >= threshold * threshold) {
+      g[i].SetClamp(255, 255, 255);
+    } else {
+      g[i].SetClamp(0, 0, 0);
+    }
+  }
+
+  delete pixels;
+  pixels = g;
 }
 
 
