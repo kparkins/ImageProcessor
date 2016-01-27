@@ -80,13 +80,13 @@ void Image::ChangeContrast (double factor)
   }
   luminance /= num_pixels;
 
-  Pixel averagePixel(luminance, luminance, luminance, 1.f);
   for(int i = 0; i < num_pixels; ++i) {
     if(invert) {
       pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
     }
-    pixels[i] =  averagePixel * (1 - factor) + pixels[i] * factor;
-    pixels[i].SetClamp(pixels[i].r, pixels[i].g, pixels[i].b);
+    pixels[i].r = ComponentLerp(luminance, pixels[i].r, factor);
+    pixels[i].g = ComponentLerp(luminance, pixels[i].g, factor);
+    pixels[i].b = ComponentLerp(luminance, pixels[i].b, factor);
   }
 }
 
@@ -100,15 +100,14 @@ void Image::ChangeSaturation(double factor)
   }
 
   for(int i = 0; i < num_pixels; ++i) {
-    float greyColor = (pixels[i].r + pixels[i].g + pixels[i].b) / 3;
-    Pixel greyPixel(greyColor, greyColor, greyColor);
+    float greyColor = pixels[i].Luminance(); 
 
     if(invert) {
       pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
     }
-
-    pixels[i] = greyPixel * (1 - factor) + pixels[i] * factor;
-    pixels[i].SetClamp(pixels[i].r, pixels[i].g, pixels[i].b);
+    pixels[i].r = ComponentLerp(greyColor, pixels[i].r, factor);
+    pixels[i].g = ComponentLerp(greyColor, pixels[i].g, factor);
+    pixels[i].b = ComponentLerp(greyColor, pixels[i].b, factor);
   }
 }
 
@@ -122,9 +121,9 @@ void Image::ChangeGamma(double factor)
   }
 
   for(int i = 0; i < num_pixels; ++i) {
-    pixels[i].r = pow(pixels[i].r, 1.f / factor);   
-    pixels[i].g = pow(pixels[i].g, 1.f / factor);   
-    pixels[i].b = pow(pixels[i].b, 1.f / factor);   
+    pixels[i].SetClamp(pow((float)pixels[i].r, 1.f / factor), 
+                       pow((float)pixels[i].r, 1.f / factor), 
+                       pow((float)pixels[i].r, 1.f / factor));
   }
 }
 
