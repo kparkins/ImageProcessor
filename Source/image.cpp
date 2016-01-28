@@ -251,11 +251,6 @@ void Image::OrderedDither(int nbits)
 static float QuantizeFloyd(Component original, int numChannels) {
   float normalized = ((float) original) / 256.f;
   float quantum = floor(normalized * numChannels);
-  if(quantum < 0) {
-    quantum = 0;
-  } else if(quantum > numChannels - 1) {
-    quantum = numChannels - 1;
-  }
   return (float) (floor(255.f * quantum / (numChannels - 1)));
 }
 
@@ -283,9 +278,9 @@ Pixel& Image::GetValidPixel(int x, int y) {
 
 void Image::UpdatePixelError(int x, int y, float r, float g, float b, double weight) {
   Pixel & p = GetValidPixel(x,y);
-  p.r = clamp(0.f, 255.f, (float) p.r + r * weight);
-  p.g = clamp(0.f, 255.f, (float) p.g + g * weight);
-  p.b = clamp(0.f, 255.f, (float) p.b + b * weight);
+  p.r = clamp(0.f, 255.f, ((float) p.r) + r * weight);
+  p.g = clamp(0.f, 255.f, ((float) p.g) + g * weight);
+  p.b = clamp(0.f, 255.f, ((float) p.b) + b * weight);
 }
 
 void Image::FloydSteinbergDither(int nbits)
