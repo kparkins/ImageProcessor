@@ -54,7 +54,6 @@ Tr mod(Tn n, Tm m) {
 }
 
 
-
 /**
  * Image
  **/
@@ -67,7 +66,9 @@ public:
 
 public:
     // Creates a blank image with the given dimensions
+
     Image (int width, int height);
+    Image();
 
     // Copy iamage
     Image (const Image& src);

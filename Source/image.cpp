@@ -36,6 +36,10 @@ Image::Image (const Image& src)
     memcpy(pixels, src.pixels, src.width * src.height * sizeof(Pixel));
 }
 
+Image::Image() {
+
+}
+
 
 Image::~Image ()
 {
@@ -100,14 +104,15 @@ void Image::ChangeSaturation(double factor)
   }
 
   for(int i = 0; i < num_pixels; ++i) {
-    float greyColor = pixels[i].Luminance(); 
+    float greyColor = (pixels[i].r + pixels[i].g + pixels[i].b) / 3.f; 
+
+    pixels[i].r = ComponentLerp(greyColor, pixels[i].r, factor);
+    pixels[i].g = ComponentLerp(greyColor, pixels[i].g, factor);
+    pixels[i].b = ComponentLerp(greyColor, pixels[i].b, factor);
 
     if(invert) {
       pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
     }
-    pixels[i].r = ComponentLerp(greyColor, pixels[i].r, factor);
-    pixels[i].g = ComponentLerp(greyColor, pixels[i].g, factor);
-    pixels[i].b = ComponentLerp(greyColor, pixels[i].b, factor);
   }
 }
 
@@ -121,9 +126,9 @@ void Image::ChangeGamma(double factor)
   }
 
   for(int i = 0; i < num_pixels; ++i) {
-    pixels[i].SetClamp(pow((float)pixels[i].r, 1.f / factor), 
-                       pow((float)pixels[i].r, 1.f / factor), 
-                       pow((float)pixels[i].r, 1.f / factor));
+    pixels[i].SetClamp(pow((float)pixels[i].r / 256.f, 1.f / factor) * 256.f, 
+                       pow((float)pixels[i].g / 256.f, 1.f / factor) * 256.f, 
+                       pow((float)pixels[i].b / 256.f, 1.f / factor) * 256.f);
   }
 }
 
@@ -131,6 +136,11 @@ Image* Image::Crop(int x, int y, int w, int h)
 {
   if(x < 0 || y < 0 || w < 0 || h < 0) {
     std::cerr << "Error. Negative argument to Image::Crop." << std::endl;
+    return NULL;
+  }
+
+  if(x >= width || y >= height) {
+    std::cerr << "Error. X or Y value out of image pixel ranged." << std::endl;
     return NULL;
   }
 
@@ -146,16 +156,18 @@ Image* Image::Crop(int x, int y, int w, int h)
     h = height - y;
   }
 
-  int dx = 0;
   int dy = 0;
   Image* image = new Image(w, h);
   assert(image != NULL);
   Pixel* targetPixels = image->pixels;
-  for(int sy = y; sy < height; ++sy, ++dy) {
-    for(int sx = x; sx < width; ++sx, ++dx) {
-      targetPixels[dy * w + dx] = pixels[sy * width + sx];
+  for(int sy = y; sy < height && sy - y < h; ++sy, ++dy) {
+    int dx = 0;
+    for(int sx = x; sx < width && sx - x < w; ++sx, ++dx) {
+      targetPixels[dy * w + dx].r = pixels[sy * width + sx].r;
+      targetPixels[dy * w + dx].g = pixels[sy * width + sx].g;
+      targetPixels[dy * w + dx].b = pixels[sy * width + sx].b;
+      targetPixels[dy * w + dx].a = pixels[sy * width + sx].a;
     }
-    dx = 0;
   }
   return image;
 }
@@ -432,7 +444,6 @@ void Image::ConvolveEdgeDetect(PixelFloat* result, int* filter, int n) {
       result[j * width + i].Set(r,g,b);
     }
   }
-
 }
 
 void Image::EdgeDetect(int threshold)
@@ -471,11 +482,129 @@ void Image::EdgeDetect(int threshold)
   pixels = g;
 }
 
+void MagnifyX(Image* dst, Image* src, int smethod) {
+  Pixel* result = dst->pixels;
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) {
+      switch(smethod) {
+        case IMAGE_SAMPLING_POINT: {
+          result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
+          break;
+        }
+        case IMAGE_SAMPLING_HAT: {
+          double range = 2.0;
+          break;
+        }
+        case IMAGE_SAMPLING_MITCHELL: {
+          double range = 4.0;
+          break;                              
+        }
+      }
+    }
+  }
+}
+
+void MinifyX(Image* dst, Image* src, int smethod) {
+  Pixel* result = dst->pixels;
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) {
+      switch(smethod) {
+        case IMAGE_SAMPLING_POINT: {
+          result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
+          break;
+        }
+        case IMAGE_SAMPLING_HAT: {
+          double range = 2.0;
+          break;
+        }
+        case IMAGE_SAMPLING_MITCHELL: {
+          double range = 4.0;
+          break;                              
+        }
+      }
+    }
+  }
+}
+
+void MagnifyY(Image* dst, Image* src, int smethod) {
+  Pixel* result = dst->pixels;
+
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) { 
+      switch(smethod) {
+        case IMAGE_SAMPLING_POINT: {
+          result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
+          break;
+        }
+        case IMAGE_SAMPLING_HAT: {
+          double range = 2.0;
+          break;
+        }
+        case IMAGE_SAMPLING_MITCHELL: {
+          double range = 4.0;
+          break;                              
+        }
+      }   
+    }
+  }
+}
+
+void MinifyY(Image* dst, Image* src, int smethod) {
+  Pixel* result = dst->pixels;
+
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) { 
+      switch(smethod) {
+        case IMAGE_SAMPLING_POINT: {
+          result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
+          break;
+        }
+        case IMAGE_SAMPLING_HAT: {
+          double range = 2.0;
+          break;
+        }
+        case IMAGE_SAMPLING_MITCHELL: {
+          double range = 4.0;
+          break;                              
+        }
+      }   
+    }
+  }
+}
+
 
 Image* Image::Scale(int sizex, int sizey)
 {
-  /* Your Work Here (Section 3.5.1) */
-  return NULL ;
+  if(sizex <= 0) {
+    std::cerr << "Error. X dimension to scale must be greater than 0." << std::endl;
+    return NULL;
+  }
+
+  if(sizey <= 0) {
+    std::cerr << "Error. Y dimension to scale must be greater than 0." << std::endl;
+    return NULL;
+  }
+
+  float sx = (float) sizex / (float) width;
+  float sy = (float) sizey / (float) height;
+  Image* tempImage = new Image(sizex, height);
+
+  if(sx > 1.f) {
+    MagnifyX(tempImage, this, sampling_method);
+  } else {
+    MinifyX(tempImage, this, sampling_method);
+  }
+
+  Image* resultImage = new Image(sizex, sizey); 
+
+  if(sy > 1.f) {
+    MagnifyY(resultImage, tempImage, sampling_method);
+  } else {
+    MinifyY(resultImage, tempImage, sampling_method);
+  }
+
+  delete tempImage;
+  return resultImage;
 }
 
 void Image::Shift(double sx, double sy)
