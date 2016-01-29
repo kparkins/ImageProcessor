@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
+#include <functional>
 
 
 /**
@@ -477,92 +478,188 @@ void Image::EdgeDetect(int threshold)
   pixels = g;
 }
 
+float HatWeight(float x) {
+  if(fabs(x) > 1.0) {
+    return 0.0;
+  }
+  return 1.0 - fabs(x);
+} 
+
+float MitchellWeight(float x) {
+  x = fabs(x);
+  if(x >= 1.f && x < 2.f) {
+    return (1.f / 6.f) * (((-7.f/3.f) * x * x * x) + (12 * x * x) - (20 * x) + (32.f / 3.f)); 
+  } else if(x >= 0.f && x < 1.f){
+    return (1.f / 6.f) * ((7.f * x * x * x) - (12 * x * x) + (16.f / 3.f));
+  }
+  return 0.f;
+}
+
 void MagnifyX(Image* dst, Image* src, int smethod) {
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float x0 = 0.f;
+  float weight = 0.f;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+  float normalization = 0.f;
   Pixel* result = dst->pixels;
+  float s = (float) dst->width / (float) src->width;
+
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
-      switch(smethod) {
-        case IMAGE_SAMPLING_POINT: {
-          result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
-          break;
-        }
-        case IMAGE_SAMPLING_HAT: {
-          double range = 2.0;
-          break;
-        }
-        case IMAGE_SAMPLING_MITCHELL: {
-          double range = 4.0;
-          break;                              
-        }
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
+        continue;
       }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      x0 = (float) i / s;
+      for(int x = x0 - width; x <= x0 + width; ++x) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight(x - i / s);
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(x - i / s);
+        }
+        Pixel & p = src->GetValidPixel(x, j);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
     }
   }
 }
 
 void MinifyX(Image* dst, Image* src, int smethod) {
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float x0 = 0.f;
+  float weight = 0.f;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+  float normalization = 0.f;
   Pixel* result = dst->pixels;
+  float s = (float) dst->width / (float) src->width;
+
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
-      switch(smethod) {
-        case IMAGE_SAMPLING_POINT: {
-          result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
-          break;
-        }
-        case IMAGE_SAMPLING_HAT: {
-          double range = 2.0;
-          break;
-        }
-        case IMAGE_SAMPLING_MITCHELL: {
-          double range = 4.0;
-          break;                              
-        }
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
+        continue;
       }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      x0 = (float) i / s;
+      for(int x = x0 - width; x <= x0 + width; ++x) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight(x * s - i);
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(x * s - i);
+        }
+        Pixel & p = src->GetValidPixel(x, j);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
     }
   }
 }
 
 void MagnifyY(Image* dst, Image* src, int smethod) {
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float y0 = 0.f;
+  float weight = 0.f;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+  float normalization = 0.f;
   Pixel* result = dst->pixels;
+  float s = (float) dst->height / (float) src->height;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) { 
-      switch(smethod) {
-        case IMAGE_SAMPLING_POINT: {
-          result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
-          break;
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
+        continue;
+      }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      y0 = j / s; 
+      for(int y = y0 - width; y <= y0 + width; ++y) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight( y - j / s);
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(y - j / s);
         }
-        case IMAGE_SAMPLING_HAT: {
-          double range = 2.0;
-          break;
-        }
-        case IMAGE_SAMPLING_MITCHELL: {
-          double range = 4.0;
-          break;                              
-        }
-      }   
+        Pixel& p = src->GetValidPixel(i, y);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
     }
   }
 }
 
 void MinifyY(Image* dst, Image* src, int smethod) {
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float y0 = 0.f;
+  float weight = 0.f;
+  float normalization = 0.f;
+
   Pixel* result = dst->pixels;
+  float s = (float) dst->height / (float) src->height;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f / s: 4.f / s;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) { 
-      switch(smethod) {
-        case IMAGE_SAMPLING_POINT: {
-          result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
-          break;
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
+        continue;
+      }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      y0 = j / s; 
+      for(int y = y0 - width; y <= y0 + width; ++y) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight(y * s - j); 
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(y * s - j);
         }
-        case IMAGE_SAMPLING_HAT: {
-          double range = 2.0;
-          break;
-        }
-        case IMAGE_SAMPLING_MITCHELL: {
-          double range = 4.0;
-          break;                              
-        }
-      }   
+        Pixel& p = src->GetValidPixel(i, y);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
     }
   }
 }
@@ -579,22 +676,32 @@ Image* Image::Scale(int sizex, int sizey)
     std::cerr << "Error. Y dimension to scale must be greater than 0." << std::endl;
     return NULL;
   }
+  if(sampling_method != IMAGE_SAMPLING_POINT && 
+     sampling_method != IMAGE_SAMPLING_HAT &&
+     sampling_method != IMAGE_SAMPLING_MITCHELL) {
+    std::cerr << "Error. Invalid image sampling type to Scale." << std::endl;
+    return NULL;
+  }
 
   float sx = (float) sizex / (float) width;
   float sy = (float) sizey / (float) height;
   Image* tempImage = new Image(sizex, height);
 
   if(sx > 1.f) {
+    std::cerr << "mag x " << std::endl;
     MagnifyX(tempImage, this, sampling_method);
   } else {
+    std::cerr << "min x " << std::endl;
     MinifyX(tempImage, this, sampling_method);
   }
 
   Image* resultImage = new Image(sizex, sizey); 
 
   if(sy > 1.f) {
+    std::cerr << "mag y " << std::endl;
     MagnifyY(resultImage, tempImage, sampling_method);
   } else {
+    std::cerr << "min y " << std::endl;
     MinifyY(resultImage, tempImage, sampling_method);
   }
 
