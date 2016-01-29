@@ -77,6 +77,8 @@ public:
     ~Image ();
 
     // Pixel access
+    int ValidX(int x);
+    int ValidY(int y);
     int ValidCoord (int x, int y)  { return x>=0 && x<width && y>=0 && y<height; }
     Pixel& GetPixel (int x, int y) { assert(ValidCoord(x,y)); return pixels[y*width + x]; }
     Pixel& GetValidPixel(int x, int y);

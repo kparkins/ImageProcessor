@@ -63,9 +63,14 @@ void Image::Brighten (double factor)
     return;
   }
 
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
   for(int i = 0; i < num_pixels; ++i) {
-    pixels[i] = pixels[i] * factor;
-    pixels[i].SetClamp(pixels[i].r, pixels[i].g, pixels[i].b);
+    r = (float) pixels[i].r * factor;
+    g = (float) pixels[i].g * factor;
+    b = (float) pixels[i].b * factor;
+    pixels[i].SetClamp(r, g, b);
   }
 
 }
@@ -86,12 +91,13 @@ void Image::ChangeContrast (double factor)
   luminance /= num_pixels;
 
   for(int i = 0; i < num_pixels; ++i) {
-    if(invert) {
-      pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
-    }
     pixels[i].r = ComponentLerp(luminance, pixels[i].r, factor);
     pixels[i].g = ComponentLerp(luminance, pixels[i].g, factor);
     pixels[i].b = ComponentLerp(luminance, pixels[i].b, factor);
+
+    if(invert) {
+      pixels[i].Set(255 - pixels[i].r, 255 - pixels[i].g, 255 - pixels[i].b);
+    }
   }
 }
 
@@ -135,8 +141,8 @@ void Image::ChangeGamma(double factor)
 
 Image* Image::Crop(int x, int y, int w, int h)
 {
-  if(x < 0 || y < 0 || w < 0 || h < 0) {
-    std::cerr << "Error. Negative argument to Image::Crop." << std::endl;
+  if(x < 0 || y < 0 || w <= 0 || h <= 0) {
+    std::cerr << "Error. X & Y must be >= 0. W & H must be > 0." << std::endl;
     return NULL;
   }
 
@@ -269,6 +275,13 @@ const double
     GAMMA = 5.0 / 16.0,
     DELTA = 1.0 / 16.0;
 
+int Image::ValidX(int x) {
+  return mod<int>(x, width);
+}
+
+int Image::ValidY(int y) {
+  return mod<int>(y, height);
+}
 
 Pixel& Image::GetValidPixel(int x, int y) {
   return pixels[mod<int>(y, height) * width + mod<int>(x, width)];
@@ -284,7 +297,7 @@ void Image::UpdatePixelError(int x, int y, float r, float g, float b, double wei
 void Image::FloydSteinbergDither(int nbits)
 {
   if(nbits < 1 || nbits > 8) {
-    std::cerr << "Error. Random Dither only accepts arguments in the range [1, 8]." << std::endl;
+    std::cerr << "Error. Floyd Steinberg Dither only accepts arguments in the range [1, 8]." << std::endl;
     return;
   }
   float r = 0;
@@ -294,9 +307,14 @@ void Image::FloydSteinbergDither(int nbits)
   for(int j = 0; j < height; ++j) {
     for(int i = 0; i < width; ++i) {
       Pixel & p = pixels[j * width + i]; 
+
       r = ((float) p.r) - QuantizeFloyd(p.r, numChannels);
       g = ((float) p.g) - QuantizeFloyd(p.g, numChannels);
       b = ((float) p.b) - QuantizeFloyd(p.b, numChannels);
+
+      p.r = clamp(0, 255, QuantizeFloyd(p.r, numChannels));
+      p.g = clamp(0, 255, QuantizeFloyd(p.g, numChannels));
+      p.b = clamp(0, 255, QuantizeFloyd(p.b, numChannels));
 
       UpdatePixelError(i + 1, j    , r, g, b, ALPHA);  
       UpdatePixelError(i - 1, j + 1, r, g, b, BETA);
@@ -685,20 +703,16 @@ Image* Image::Scale(int sizex, int sizey)
   Image* tempImage = new Image(sizex, height);
 
   if(sx > 1.f) {
-    std::cerr << "mag x " << std::endl;
     MagnifyX(tempImage, this, sampling_method);
   } else {
-    std::cerr << "min x " << std::endl;
     MinifyX(tempImage, this, sampling_method);
   }
 
   Image* resultImage = new Image(sizex, sizey); 
 
   if(sy > 1.f) {
-    std::cerr << "mag y " << std::endl;
     MagnifyY(resultImage, tempImage, sampling_method);
   } else {
-    std::cerr << "min y " << std::endl;
     MinifyY(resultImage, tempImage, sampling_method);
   }
 
