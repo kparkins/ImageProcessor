@@ -164,10 +164,7 @@ Image* Image::Crop(int x, int y, int w, int h)
   for(int sy = y; sy < height && sy - y < h; ++sy, ++dy) {
     int dx = 0;
     for(int sx = x; sx < width && sx - x < w; ++sx, ++dx) {
-      targetPixels[dy * w + dx].r = pixels[sy * width + sx].r;
-      targetPixels[dy * w + dx].g = pixels[sy * width + sx].g;
-      targetPixels[dy * w + dx].b = pixels[sy * width + sx].b;
-      targetPixels[dy * w + dx].a = pixels[sy * width + sx].a;
+      targetPixels[dy * w + dx] = pixels[sy * width + sx];
     }
   }
   return image;
