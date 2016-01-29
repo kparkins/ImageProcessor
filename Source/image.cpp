@@ -543,10 +543,10 @@ void MinifyX(Image* dst, Image* src, int smethod) {
   float b = 0.f;
   float x0 = 0.f;
   float weight = 0.f;
-  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
   float normalization = 0.f;
   Pixel* result = dst->pixels;
   float s = (float) dst->width / (float) src->width;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f / s: 4.f / s;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
