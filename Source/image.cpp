@@ -720,9 +720,112 @@ Image* Image::Scale(int sizex, int sizey)
   return resultImage;
 }
 
+void ShiftX(Image* dst, Image* src, int smethod, float sx) {
+  assert(src);
+  assert(dst);
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float x0 = 0.f;
+  float weight = 0.f;
+  float normalization = 0.f;
+  Pixel* result = dst->pixels;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) {
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel(i - sx, j);
+        continue;
+      }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      x0 = (float) i - sx;
+      for(int x = x0 - width; x <= x0 + width; ++x) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight(x - i + sx);
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(x - i + sx);
+        }
+        Pixel & p = src->GetValidPixel(x, j);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
+    }
+  }
+}
+
+void ShiftY(Image* dst, Image* src, float smethod, float sy) {
+  assert(src);
+  assert(dst);
+  float r = 0.f;
+  float g = 0.f;
+  float b = 0.f;
+  float y0 = 0.f;
+  float weight = 0.f;
+  float normalization = 0.f;
+
+  Pixel* result = dst->pixels;
+  float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+
+  for(int j = 0; j < dst->height; ++j) {
+    for(int i = 0; i < dst->width; ++i) { 
+      if(smethod == IMAGE_SAMPLING_POINT) {
+        result[j * dst->width + i] = src->GetValidPixel(i, j - sy);
+        continue;
+      }
+      r = 0.f;
+      g = 0.f;
+      b = 0.f;
+      normalization = 0.f;
+      y0 = j - sy;
+      for(int y = y0 - width; y <= y0 + width; ++y) {
+        if(smethod == IMAGE_SAMPLING_HAT) {
+          weight = HatWeight(y - j +  sy); 
+        } else if(smethod == IMAGE_SAMPLING_MITCHELL) {
+          weight = MitchellWeight(y - j + sy);
+        }
+        Pixel& p = src->GetValidPixel(i, y);
+        r += weight * (float) p.r;
+        g += weight * (float) p.g;
+        b += weight * (float) p.b;
+        normalization += weight;
+      }
+      r /= normalization;
+      g /= normalization;
+      b /= normalization;
+      result[j * dst->width + i].SetClamp(r, g, b);
+    }
+  }
+
+}
+
 void Image::Shift(double sx, double sy)
 {
-  /* Your Work Here (Section 3.5.2) */
+  if(sampling_method != IMAGE_SAMPLING_POINT && 
+     sampling_method != IMAGE_SAMPLING_HAT &&
+     sampling_method != IMAGE_SAMPLING_MITCHELL) {
+    std::cerr << "Error. Invalid image sampling type to Shift." << std::endl;
+    return;
+  }
+  Image* tempImage = new Image(width, height);
+  Pixel* tempPixels = tempImage->pixels;
+  for(int i = 0; i < num_pixels; ++i) {
+    tempPixels[i].r = 0;
+    tempPixels[i].g = 0;
+    tempPixels[i].b = 0;
+  }
+  ShiftX(tempImage, this, sampling_method, sx);
+  ShiftY(this, tempImage, sampling_method, sy);
+  delete tempImage;
 }
 
 
