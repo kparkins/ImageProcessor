@@ -511,15 +511,13 @@ float MitchellWeight(float x) {
 }
 
 void MagnifyX(Image* dst, Image* src, int smethod) {
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float x0 = 0.f;
   float weight = 0.f;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
   float normalization = 0.f;
   Pixel* result = dst->pixels;
   float s = (float) dst->width / (float) src->width;
+  PixelFloat pf;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
@@ -527,9 +525,7 @@ void MagnifyX(Image* dst, Image* src, int smethod) {
         result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       x0 = (float) i / s;
       for(int x = x0 - width; x <= x0 + width; ++x) {
@@ -539,29 +535,27 @@ void MagnifyX(Image* dst, Image* src, int smethod) {
           weight = MitchellWeight(x - i / s);
         }
         Pixel & p = src->GetValidPixel(x, j);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
     }
   }
 }
 
 void MinifyX(Image* dst, Image* src, int smethod) {
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float x0 = 0.f;
   float weight = 0.f;
   float normalization = 0.f;
   Pixel* result = dst->pixels;
   float s = (float) dst->width / (float) src->width;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f / s: 4.f / s;
+  PixelFloat pf;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
@@ -569,9 +563,7 @@ void MinifyX(Image* dst, Image* src, int smethod) {
         result[j * dst->width + i] = src->GetValidPixel((float) i / ((float) dst->width - 1.f) * src->width, j);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       x0 = (float) i / s;
       for(int x = x0 - width; x <= x0 + width; ++x) {
@@ -581,27 +573,25 @@ void MinifyX(Image* dst, Image* src, int smethod) {
           weight = MitchellWeight(x * s - i);
         }
         Pixel & p = src->GetValidPixel(x, j);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
     }
   }
 }
 
 void MagnifyY(Image* dst, Image* src, int smethod) {
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float y0 = 0.f;
   float weight = 0.f;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
   float normalization = 0.f;
+  PixelFloat pf;
   Pixel* result = dst->pixels;
   float s = (float) dst->height / (float) src->height;
 
@@ -611,9 +601,7 @@ void MagnifyY(Image* dst, Image* src, int smethod) {
         result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       y0 = j / s; 
       for(int y = y0 - width; y <= y0 + width; ++y) {
@@ -623,27 +611,24 @@ void MagnifyY(Image* dst, Image* src, int smethod) {
           weight = MitchellWeight(y - j / s);
         }
         Pixel& p = src->GetValidPixel(i, y);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
     }
   }
 }
 
 void MinifyY(Image* dst, Image* src, int smethod) {
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float y0 = 0.f;
   float weight = 0.f;
   float normalization = 0.f;
-
+  PixelFloat pf;
   Pixel* result = dst->pixels;
   float s = (float) dst->height / (float) src->height;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f / s: 4.f / s;
@@ -654,9 +639,7 @@ void MinifyY(Image* dst, Image* src, int smethod) {
         result[j * dst->width + i] = src->GetValidPixel(i, (float) j / ((float) dst->height - 1.f) * src->height);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       y0 = j / s; 
       for(int y = y0 - width; y <= y0 + width; ++y) {
@@ -666,15 +649,15 @@ void MinifyY(Image* dst, Image* src, int smethod) {
           weight = MitchellWeight(y * s - j);
         }
         Pixel& p = src->GetValidPixel(i, y);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
     }
   }
 }
@@ -723,14 +706,12 @@ Image* Image::Scale(int sizex, int sizey)
 void ShiftX(Image* dst, Image* src, int smethod, float sx) {
   assert(src);
   assert(dst);
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float x0 = 0.f;
   float weight = 0.f;
   float normalization = 0.f;
   Pixel* result = dst->pixels;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
+  PixelFloat pf;
 
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) {
@@ -738,9 +719,7 @@ void ShiftX(Image* dst, Image* src, int smethod, float sx) {
         result[j * dst->width + i] = src->GetValidPixel(i - sx, j);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       x0 = (float) i - sx;
       for(int x = x0 - width; x <= x0 + width; ++x) {
@@ -750,15 +729,15 @@ void ShiftX(Image* dst, Image* src, int smethod, float sx) {
           weight = MitchellWeight(x - i + sx);
         }
         Pixel & p = src->GetValidPixel(x, j);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
     }
   }
 }
@@ -766,9 +745,6 @@ void ShiftX(Image* dst, Image* src, int smethod, float sx) {
 void ShiftY(Image* dst, Image* src, float smethod, float sy) {
   assert(src);
   assert(dst);
-  float r = 0.f;
-  float g = 0.f;
-  float b = 0.f;
   float y0 = 0.f;
   float weight = 0.f;
   float normalization = 0.f;
@@ -776,15 +752,15 @@ void ShiftY(Image* dst, Image* src, float smethod, float sy) {
   Pixel* result = dst->pixels;
   float width = (smethod == IMAGE_SAMPLING_HAT) ? 2.f : 4.f;
 
+  PixelFloat pf;
+
   for(int j = 0; j < dst->height; ++j) {
     for(int i = 0; i < dst->width; ++i) { 
       if(smethod == IMAGE_SAMPLING_POINT) {
         result[j * dst->width + i] = src->GetValidPixel(i, j - sy);
         continue;
       }
-      r = 0.f;
-      g = 0.f;
-      b = 0.f;
+      memset((void*) &pf.r, 0, sizeof(pf));
       normalization = 0.f;
       y0 = j - sy;
       for(int y = y0 - width; y <= y0 + width; ++y) {
@@ -794,15 +770,16 @@ void ShiftY(Image* dst, Image* src, float smethod, float sy) {
           weight = MitchellWeight(y - j + sy);
         }
         Pixel& p = src->GetValidPixel(i, y);
-        r += weight * (float) p.r;
-        g += weight * (float) p.g;
-        b += weight * (float) p.b;
+        pf.r += weight * (float) p.r;
+        pf.g += weight * (float) p.g;
+        pf.b += weight * (float) p.b;
         normalization += weight;
       }
-      r /= normalization;
-      g /= normalization;
-      b /= normalization;
-      result[j * dst->width + i].SetClamp(r, g, b);
+      pf.r /= normalization;
+      pf.g /= normalization;
+      pf.b /= normalization;
+      result[j * dst->width + i].SetClamp(pf.r, pf.g, pf.b);
+
     }
   }
 
